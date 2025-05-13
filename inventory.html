@@ -46,6 +46,7 @@
       font-size: 16px;
       cursor: pointer;
       width: 100%;
+      margin-bottom: 10px;
     }
     button:hover {
       background-color: #00b5cc;
@@ -93,37 +94,63 @@
     </select>
 
     <button type="submit">Submit Inventory</button>
+    <button type="button" onclick="downloadExcel()">Export to Excel</button>
+    <button type="button" onclick="logout()">Logout (Clear Data)</button>
   </form>
 
   <a class="back" href="dashboard.html">← Back to Dashboard</a>
 
   <script>
+    const STORAGE_KEY = "inventoryData";
+
     document.getElementById("inventoryForm").addEventListener("submit", function(event) {
       event.preventDefault();
 
-      const formData = {
+      const entry = {
         product: document.getElementById("product").value,
         stock: document.getElementById("stock").value,
         updateType: document.getElementById("updateType").value,
-        updatedBy: document.getElementById("updatedBy").value
+        updatedBy: document.getElementById("updatedBy").value,
+        timestamp: new Date().toLocaleString()
       };
 
-      fetch("https://script.google.com/macros/s/AKfycbz8MQEilHs2DKtluvye3bsql3-QPD5q5CnMXmIgSUp5LQVJG6oj6QTZWXDcGMEsK0QlsA/exec", {
-        method: "POST",
-        body: JSON.stringify(formData),
-        headers: {
-          "Content-Type": "application/json"
-        }
-      })
-      .then(response => response.text())
-      .then(data => {
-        alert("Inventory update submitted successfully!");
-        document.getElementById("inventoryForm").reset();
-      })
-      .catch(error => {
-        alert("Error submitting inventory: " + error);
-      });
+      let data = JSON.parse(localStorage.getItem(STORAGE_KEY)) || [];
+      data.push(entry);
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+
+      alert("Inventory update saved locally!");
+      this.reset();
     });
+
+    function logout() {
+      if (confirm("Are you sure you want to log out and clear all data?")) {
+        localStorage.removeItem(STORAGE_KEY);
+        alert("Data cleared.");
+      }
+    }
+
+    function downloadExcel() {
+      const data = JSON.parse(localStorage.getItem(STORAGE_KEY)) || [];
+      if (data.length === 0) {
+        alert("No data to export.");
+        return;
+      }
+
+      let csv = "Product,Stock,Update Type,Updated By,Timestamp\n";
+      data.forEach(row => {
+        csv += `${row.product},${row.stock},${row.updateType},${row.updatedBy},${row.timestamp}\n`;
+      });
+
+      const blob = new Blob([csv], { type: "text/csv" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "inventory_data.csv";
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    }
   </script>
 </body>
 </html>
